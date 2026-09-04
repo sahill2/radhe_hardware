@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
-
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/radhe_hardware";
+import dns from "dns";
 
 interface MongooseCache {
   conn: typeof mongoose | null;
@@ -19,14 +18,29 @@ if (!global.mongooseCache) {
 }
 
 export async function connectToDatabase(): Promise<typeof mongoose> {
+  const MONGODB_URI = process.env.MONGODB_URI;
+
+  if (!MONGODB_URI) {
+    throw new Error(
+      "Please define the MONGODB_URI environment variable in your .env.local file"
+    );
+  }
+
   if (cached.conn) {
     return cached.conn;
+  }
+
+  try {
+    // Ensure DNS resolver can resolve MongoDB Atlas SRV records on all networks
+    dns.setServers(["8.8.8.8", "8.8.4.4", "1.1.1.1"]);
+  } catch {
+    // Ignore if not permitted
   }
 
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 10000,
     };
 
     cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongooseInstance) => {
