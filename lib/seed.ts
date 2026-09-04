@@ -35,22 +35,23 @@ export async function seedDatabase(force = false) {
   const productCount = await Product.countDocuments();
   const adminCount = await AdminUser.countDocuments();
 
-  // 1. Seed Admin User
-  if (adminCount === 0 || force) {
-    const adminPassword = process.env.DEFAULT_ADMIN_PASSWORD || "Radhe@Admin2025";
+  // 1. Seed Admin User if environment variables are provided
+  if ((adminCount === 0 || force) && process.env.DEFAULT_ADMIN_PASSWORD && process.env.DEFAULT_ADMIN_EMAIL) {
+    const adminPassword = process.env.DEFAULT_ADMIN_PASSWORD;
+    const adminEmail = process.env.DEFAULT_ADMIN_EMAIL.toLowerCase().trim();
     const passwordHash = await hashPassword(adminPassword);
 
     await AdminUser.findOneAndUpdate(
-      { email: "admin@radhehardware.com" },
+      { email: adminEmail },
       {
-        email: "admin@radhehardware.com",
+        email: adminEmail,
         name: "Radhe Hardware Owner",
         passwordHash,
         role: "owner",
       },
       { upsert: true, new: true }
     );
-    console.log("✓ Default Admin user seeded: admin@radhehardware.com");
+    console.log(`✓ Admin user seeded from environment: ${adminEmail}`);
   }
 
   // 2. Seed Categories

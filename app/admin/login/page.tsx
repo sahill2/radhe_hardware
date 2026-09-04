@@ -129,10 +129,10 @@ export default function AdminLoginPage() {
             </button>
           </form>
 
-          {/* Helper hint */}
+          {/* Security notice */}
           <div className="mt-6 pt-4 border-t border-[#f3f4f6] text-center">
             <p className="text-[11px] text-[#9ca3af]">
-              Default login: <span className="font-semibold text-gray-700">admin@radhehardware.com</span> / <span className="font-semibold text-gray-700">Radhe@Admin2025</span>
+              માત્ર અધિકૃત દુકાન સંચાલક / ઓનર માટે
             </p>
           </div>
         </div>
