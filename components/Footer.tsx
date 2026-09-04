@@ -4,16 +4,16 @@ import React from "react";
 import Link from "next/link";
 import { useLanguage } from "../context/LanguageContext";
 import { siteContent } from "../data/content";
-import { Phone, MessageCircle, MapPin, Clock, ShieldCheck, Heart } from "lucide-react";
+import { Phone, MessageCircle, MapPin, Clock, ShieldCheck, Lock } from "lucide-react";
 
 export default function Footer() {
   const { lang, t } = useLanguage();
   const { business } = siteContent;
 
   return (
-    <footer className="w-full bg-[#111827] text-white pt-14 pb-28 md:pb-14 border-t border-white/10">
+    <footer className="w-full bg-[#111827] text-white pt-12 pb-24 md:pb-12 border-t border-white/10">
       <div className="max-w-[1240px] mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 pb-12 border-b border-white/10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 pb-10 border-b border-white/10">
           {/* Brand Col */}
           <div className="flex flex-col">
             <div className="flex items-center gap-2 mb-3">
@@ -87,7 +87,14 @@ export default function Footer() {
             <ul className="space-y-3 text-xs text-stone-300">
               <li className="flex items-start gap-2.5">
                 <MapPin className="w-4 h-4 text-[#1E8E3E] shrink-0 mt-0.5" />
-                <span>{t(business.addressGu, business.addressEn)}</span>
+                <a
+                  href={business.mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white"
+                >
+                  {t(business.addressGu, business.addressEn)}
+                </a>
               </li>
               <li className="flex items-center gap-2.5">
                 <Phone className="w-4 h-4 text-[#1E8E3E] shrink-0" />
@@ -108,7 +115,7 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Wholesale & Blessing Col */}
+          {/* Wholesale & Delivery Col */}
           <div className="flex flex-col justify-between">
             <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
               <span className="text-xs font-bold text-amber-400 block mb-1">
@@ -122,24 +129,31 @@ export default function Footer() {
               </p>
             </div>
 
-            <div className="mt-4 pt-4 border-t border-white/10 text-center sm:text-left">
+            <div className="mt-4 pt-3 border-t border-white/10 text-center sm:text-left">
               <p className="text-xs text-emerald-300 font-medium">
                 "{t(business.blessingGu, business.blessingEn)}"
-              </p>
-              <p className="text-[11px] text-stone-400 mt-0.5">
-                "{t(business.trustGu, business.trustEn)}"
               </p>
             </div>
           </div>
         </div>
 
-        {/* Bottom copyright row */}
+        {/* Bottom copyright row with discreet owner login */}
         <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-stone-400">
           <p>
             © {new Date().getFullYear()} {t(business.nameGu, business.nameEn)}. {t("સર્વાધિકાર સુરક્ષિત.", "All rights reserved.")}
           </p>
-          <div className="flex items-center gap-2">
+
+          <div className="flex items-center gap-4">
             <span>{t("લાલપુર, તા. કપડવંજ, ગુજરાત", "Lalpur, Ta. Kapadwanj, Gujarat")}</span>
+            <span className="text-stone-600">•</span>
+            {/* Discreet Owner / Admin link */}
+            <Link
+              href="/admin/login"
+              className="inline-flex items-center gap-1 text-stone-500 hover:text-stone-300 transition-colors text-[11px]"
+            >
+              <Lock className="w-3 h-3" />
+              <span>{t("ઓનર લોગીન", "Owner Login")}</span>
+            </Link>
           </div>
         </div>
       </div>

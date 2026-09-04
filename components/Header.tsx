@@ -126,16 +126,16 @@ export default function Header() {
                   <Grid className="w-4 h-4" />
                   <span>{t("કેટેગરીઝ", "Categories")}</span>
                 </Link>
-                <Link href="/#sprinklers" className="hover:text-[#1E8E3E] transition-colors">
+                <Link href="/category/sprinkler-system" className="hover:text-[#1E8E3E] transition-colors">
                   {t("સ્પ્રિંકલર", "Sprinklers")}
                 </Link>
-                <Link href="/#fittings" className="hover:text-[#1E8E3E] transition-colors">
+                <Link href="/category/plumbing-fittings" className="hover:text-[#1E8E3E] transition-colors">
                   {t("ફિટિંગ્સ", "Fittings")}
                 </Link>
-                <Link href="/#pvc-pipes" className="hover:text-[#1E8E3E] transition-colors">
+                <Link href="/category/pvc-pipes" className="hover:text-[#1E8E3E] transition-colors">
                   {t("PVC પાઈપ", "PVC Pipes")}
                 </Link>
-                <Link href="/#drip" className="hover:text-[#1E8E3E] transition-colors">
+                <Link href="/category/drip-irrigation" className="hover:text-[#1E8E3E] transition-colors">
                   {t("ડ્રિપ", "Drip")}
                 </Link>
               </nav>

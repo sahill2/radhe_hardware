@@ -1,7 +1,0 @@
-{
-  "/_not-found/page": "/_not-found",
-  "/page": "/",
-  "/categories/page": "/categories",
-  "/product/[slug]/page": "/product/[slug]",
-  "/category/[slug]/page": "/category/[slug]"
-}

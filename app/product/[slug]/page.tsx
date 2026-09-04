@@ -1,14 +1,15 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import Header from "../../../components/Header";
 import Footer from "../../../components/Footer";
 import MobileBottomNav from "../../../components/MobileBottomNav";
+import FloatingWhatsApp from "../../../components/FloatingWhatsApp";
 import ProductCard from "../../../components/ProductCard";
-import { getProductBySlug, products, Product } from "../../../data/products";
+import { getProductBySlug as getStaticProduct, products as staticProducts } from "../../../data/products";
 import { mainCategories } from "../../../data/categories";
 import { useLanguage } from "../../../context/LanguageContext";
 import { siteContent } from "../../../data/content";
@@ -23,6 +24,9 @@ import {
   CheckCircle2,
   Sparkles,
   Layers,
+  AlertTriangle,
+  XCircle,
+  Loader2,
 } from "lucide-react";
 
 export default function ProductDetailPage() {
@@ -30,37 +34,73 @@ export default function ProductDetailPage() {
   const slug = params?.slug as string;
   const { lang, t } = useLanguage();
 
-  const product = getProductBySlug(slug);
+  const [product, setProduct] = useState<any>(() => getStaticProduct(slug));
+  const [category, setCategory] = useState<any>(null);
+  const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
 
-  const currentVariant = product?.variants[selectedVariantIndex] || product?.variants[0];
+  useEffect(() => {
+    const fetchProduct = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/products/slug/${slug}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.product) {
+            setProduct(data.product);
+            if (data.category) setCategory(data.category);
+            if (data.relatedProducts) setRelatedProducts(data.relatedProducts);
+          }
+        }
+      } catch (err) {
+        console.warn("Using fallback static product data:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const category = useMemo(() => {
-    return mainCategories.find((c) => c.slug === product?.category);
-  }, [product]);
+    if (slug) {
+      fetchProduct();
+    }
+  }, [slug]);
 
-  // Related Products Cross-selling
-  const relatedProducts = useMemo(() => {
+  const variants = product?.variants || [];
+  const currentVariant = variants[selectedVariantIndex] || variants[0];
+  const unit = currentVariant?.unit || "piece";
+  const stockQty = currentVariant?.stockQuantity ?? 25;
+  const isOutOfStock = stockQty === 0 || currentVariant?.stockStatus === "out_of_stock";
+  const isLowStock = !isOutOfStock && (stockQty <= 10 || currentVariant?.stockStatus === "low_stock");
+
+  const categoryData = useMemo(() => {
+    if (category) return category;
+    const catSlug = product?.categorySlug || product?.category;
+    return mainCategories.find((c) => c.slug === catSlug);
+  }, [product, category]);
+
+  const finalRelated = useMemo(() => {
+    if (relatedProducts && relatedProducts.length > 0) return relatedProducts;
     if (!product) return [];
-    return products
-      .filter((p) => product.relatedProductIds?.includes(p.id) || (p.category === product.category && p.id !== product.id))
+    const catSlug = product.categorySlug || product.category;
+    return staticProducts
+      .filter((p) => p.category === catSlug && p.slug !== product.slug)
       .slice(0, 3);
-  }, [product]);
+  }, [product, relatedProducts]);
 
-  if (!product) {
+  if (!product && !loading) {
     return (
-      <div className="min-h-screen bg-[#f2f4f5] flex flex-col justify-between">
+      <div className="min-h-screen bg-[#f8fafc] flex flex-col justify-between">
         <Header />
         <div className="max-w-[1200px] mx-auto px-4 py-20 text-center">
-          <h1 className="text-2xl font-bold text-[#000000] mb-3">
+          <h1 className="text-2xl font-bold text-gray-900 mb-3">
             {t("પ્રોડક્ટ મળી નથી", "Product Not Found")}
           </h1>
-          <p className="text-sm text-[#787574] mb-6">
+          <p className="text-sm text-gray-500 mb-6">
             {t("તમે શોધેલ પ્રોડક્ટ ઉપલબ્ધ નથી.", "The requested product could not be found.")}
           </p>
           <Link
             href="/"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#5433eb] text-white text-sm font-bold shadow-violet-glow"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#1E8E3E] text-white text-sm font-bold shadow-green-glow"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>{t("મુખ્ય પેજ પર પાછા જાઓ", "Back to Home")}</span>
@@ -72,76 +112,80 @@ export default function ProductDetailPage() {
     );
   }
 
+  const productNameGu = product?.nameGu || product?.nameEn || "";
+  const productNameEn = product?.nameEn || "";
+  const variantSize = currentVariant?.size || "";
+
   const whatsappUrl = createWhatsAppLink({
-    productNameEn: product.nameEn,
-    productNameGu: product.nameGu,
-    selectedVariant: currentVariant?.size,
-    categoryEn: category?.nameEn,
-    categoryGu: category?.nameGu,
+    productNameEn,
+    productNameGu,
+    selectedVariant: variantSize,
+    categoryEn: categoryData?.nameEn,
+    categoryGu: categoryData?.nameGu,
     lang,
   });
 
   return (
-    <div className="min-h-screen bg-[#f2f4f5] flex flex-col justify-between">
+    <div className="min-h-screen bg-[#f8fafc] flex flex-col justify-between selection:bg-[#1E8E3E] selection:text-white pb-24 md:pb-0">
       <Header />
 
-      <main className="flex-1 w-full pb-24 md:pb-16">
+      <main className="flex-1 w-full pb-16">
         {/* Breadcrumbs */}
-        <div className="bg-white border-b border-[#ebebeb] py-3.5">
-          <div className="max-w-[1200px] mx-auto px-4 flex items-center gap-2 text-xs text-[#787574] overflow-x-auto">
-            <Link href="/" className="hover:text-[#5433eb] transition-colors shrink-0">
+        <div className="bg-white border-b border-gray-200 py-3.5">
+          <div className="max-w-[1240px] mx-auto px-4 flex items-center gap-2 text-xs text-gray-500 overflow-x-auto">
+            <Link href="/" className="hover:text-[#1E8E3E] transition-colors shrink-0">
               {t("હોમ", "Home")}
             </Link>
             <ChevronRight className="w-3.5 h-3.5 shrink-0" />
-            {category && (
+            {categoryData && (
               <>
                 <Link
-                  href={`/category/${category.slug}`}
-                  className="hover:text-[#5433eb] transition-colors shrink-0"
+                  href={`/category/${categoryData.slug}`}
+                  className="hover:text-[#1E8E3E] transition-colors shrink-0"
                 >
-                  {t(category.nameGu, category.nameEn)}
+                  {t(categoryData.nameGu, categoryData.nameEn)}
                 </Link>
                 <ChevronRight className="w-3.5 h-3.5 shrink-0" />
               </>
             )}
-            <span className="text-[#000000] font-semibold truncate">
-              {t(product.nameGu, product.nameEn)}
+            <span className="text-gray-900 font-semibold truncate">
+              {t(productNameGu, productNameEn)}
             </span>
           </div>
         </div>
 
         {/* Main Product Showcase Section */}
-        <div className="max-w-[1200px] mx-auto px-4 pt-6 sm:pt-10">
-          <div className="bg-white rounded-[28px] p-6 sm:p-10 border border-[#ebebeb] shadow-card-dual">
+        <div className="max-w-[1240px] mx-auto px-4 pt-6 sm:pt-10">
+          <div className="bg-white rounded-[28px] p-5 sm:p-8 lg:p-10 border border-gray-200 shadow-card-dual">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
               {/* Left Column: Product Image Gallery */}
               <div className="lg:col-span-6">
                 <div className="sticky top-24 space-y-4">
-                  <div className="relative aspect-[4/3] w-full rounded-[20px] overflow-hidden bg-[#f2f4f5] border border-[#ebebeb] shadow-sm">
+                  <div className="relative aspect-[4/3] w-full rounded-[20px] overflow-hidden bg-gray-50 border border-gray-200 shadow-xs">
                     <Image
-                      src={product.image}
-                      alt={product.nameEn}
+                      src={product?.image || "/images/pvc-pipes-category.jpg"}
+                      alt={productNameEn}
                       fill
                       priority
-                      className="object-cover"
+                      className="object-contain p-4"
                     />
-                    {product.brand && (
-                      <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-[#5433eb] shadow-sm border border-white/80">
+                    {product?.brand && (
+                      <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-[#1E8E3E] shadow-sm border border-gray-200">
                         {product.brand}
                       </div>
                     )}
                   </div>
 
                   {/* Trust highlight under image */}
-                  <div className="p-4 rounded-2xl bg-[#f2f4f5] border border-[#ebebeb] flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-gray-200 flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-emerald-100 text-[#1E8E3E] flex items-center justify-center shrink-0">
                       <ShieldCheck className="w-5 h-5" />
                     </div>
                     <div>
-                      <h4 className="text-xs font-bold text-[#000000]">
+                      <h4 className="text-xs font-bold text-gray-900">
                         {t("૧૦૦% ગુણવત્તા ટેસ્ટેડ સ્ટોક", "100% Quality Tested Stock")}
                       </h4>
-                      <p className="text-[11px] text-[#787574]">
+                      <p className="text-[11px] text-gray-500">
                         {t(
                           "લાલપુર દુકાન પર સીધો સ્ટોક ઉપલબ્ધ. હોલસેલ & રિટેલ ડિલિવરી.",
                           "Direct stock available at Lalpur store. Wholesale & retail delivery."
@@ -156,93 +200,132 @@ export default function ProductDetailPage() {
               <div className="lg:col-span-6 flex flex-col justify-between">
                 <div>
                   {/* Category Pill */}
-                  {category && (
+                  {categoryData && (
                     <Link
-                      href={`/category/${category.slug}`}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#f2f4f5] text-[#5433eb] text-xs font-semibold hover:bg-stone-200 transition-colors mb-3 w-fit"
+                      href={`/category/${categoryData.slug}`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-[#1E8E3E] text-xs font-bold hover:bg-emerald-100 transition-colors mb-3 w-fit"
                     >
-                      <span>{t(category.nameGu, category.nameEn)}</span>
+                      <span>{t(categoryData.nameGu, categoryData.nameEn)}</span>
                     </Link>
                   )}
 
                   {/* Product Title */}
-                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-[-0.04em] text-[#000000] leading-tight">
-                    {t(product.nameGu, product.nameEn)}
+                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-gray-900 leading-tight">
+                    {t(productNameGu, productNameEn)}
                   </h1>
 
+                  {/* Stock Status Badge & Availability */}
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    {isOutOfStock ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold">
+                        <XCircle className="w-3.5 h-3.5" />
+                        <span>{t("હાલમાં સ્ટોક પૂર્ણ (Out of Stock)", "Currently Out of Stock")}</span>
+                      </span>
+                    ) : isLowStock ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold">
+                        <AlertTriangle className="w-3.5 h-3.5" />
+                        <span>
+                          {t(`ઓછો સ્ટોક: માત્ર ${stockQty} ${unit} બાકી`, `Low Stock: Only ${stockQty} ${unit} remaining`)}
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>
+                          {t(`હાજર સ્ટોક: ${stockQty} ${unit} ઉપલબ્ધ`, `In Stock: ${stockQty} ${unit} available`)}
+                        </span>
+                      </span>
+                    )}
+                  </div>
+
                   {/* Description */}
-                  <p className="mt-3 text-sm text-[#787574] leading-relaxed">
-                    {t(product.descriptionGu, product.descriptionEn)}
+                  <p className="mt-3 text-xs sm:text-sm text-gray-600 leading-relaxed">
+                    {t(product?.descriptionGu || "", product?.descriptionEn || "")}
                   </p>
 
-                  {/* Price Policy Banner */}
-                  <div className="my-5 p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Tag className="w-4 h-4 text-emerald-700" />
+                  {/* Price Banner */}
+                  <div className="my-5 p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <Tag className="w-4 h-4 text-[#1E8E3E]" />
                       <div>
-                        <span className="text-xs font-bold text-emerald-900 block">
-                          {t("વર્તમાન તાજો ભાવ (Current Best Price)", "Current Best Market Price")}
-                        </span>
-                        <span className="text-[11px] text-emerald-700">
-                          {t("રોજેરોજના વ્યાજબી ભાવ માટે ફોન અથવા વોટ્સએપ કરો", "Call or WhatsApp for daily fair pricing")}
-                        </span>
+                        {currentVariant?.price ? (
+                          <>
+                            <span className="text-lg font-black text-gray-900 block">
+                              ₹{currentVariant.price}{" "}
+                              <span className="text-xs font-medium text-gray-500">/ {unit}</span>
+                            </span>
+                            <span className="text-[11px] text-emerald-800">
+                              {t("તાજો વ્યાજબી બજાર ભાવ", "Current best market price")}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-xs font-bold text-emerald-900 block">
+                              {t("વર્તમાન તાજો ભાવ (Ask for Current Best Price)", "Current Best Market Price")}
+                            </span>
+                            <span className="text-[11px] text-emerald-700">
+                              {t("રોજેરોજના વ્યાજબી ભાવ માટે ફોન અથવા વોટ્સએપ કરો", "Call or WhatsApp for daily wholesale rates")}
+                            </span>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
 
                   {/* Variant / Size Selector */}
-                  {product.variants && product.variants.length > 0 && (
+                  {variants.length > 0 && (
                     <div className="mb-6">
-                      <label className="text-xs font-bold text-[#000000] uppercase tracking-wider block mb-2.5">
+                      <label className="text-xs font-bold text-gray-900 uppercase tracking-wider block mb-2.5">
                         {t("સાઈઝ / વેરિઅન્ટ પસંદ કરો:", "Select Size / Variant:")}
                       </label>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        {product.variants.map((v, idx) => (
-                          <button
-                            key={v.id}
-                            type="button"
-                            onClick={() => setSelectedVariantIndex(idx)}
-                            className={`p-3 rounded-2xl text-left border transition-all cursor-pointer ${
-                              selectedVariantIndex === idx
-                                ? "bg-[#5433eb] text-white border-[#5433eb] shadow-violet-glow"
-                                : "bg-[#f2f4f5] text-[#332f2d] border-[#ebebeb] hover:bg-stone-200"
-                            }`}
-                          >
-                            <span className="text-xs font-bold block truncate">
-                              {t(v.sizeGu || v.size, v.size)}
-                            </span>
-                            {v.type && (
+                        {variants.map((v: any, idx: number) => {
+                          const isSelected = selectedVariantIndex === idx;
+                          return (
+                            <button
+                              key={v.id || idx}
+                              type="button"
+                              onClick={() => setSelectedVariantIndex(idx)}
+                              className={`p-3 rounded-2xl text-left border transition-all cursor-pointer ${
+                                isSelected
+                                  ? "bg-[#1E8E3E] text-white border-[#1E8E3E] shadow-sm"
+                                  : "bg-gray-50 text-gray-900 border-gray-200 hover:bg-gray-100"
+                              }`}
+                            >
+                              <span className="text-xs font-bold block truncate">
+                                {t(v.sizeGu || v.size, v.size)}
+                              </span>
                               <span
                                 className={`text-[10px] block mt-0.5 ${
-                                  selectedVariantIndex === idx ? "text-stone-200" : "text-[#787574]"
+                                  isSelected ? "text-emerald-100" : "text-gray-500"
                                 }`}
                               >
-                                {v.type}
+                                {v.stockQuantity ?? 25} {v.unit || "piece"}
                               </span>
-                            )}
-                          </button>
-                        ))}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
 
                   {/* Technical Specifications Table */}
-                  {product.specifications && product.specifications.length > 0 && (
+                  {product?.specifications && product.specifications.length > 0 && (
                     <div className="mb-6">
-                      <h3 className="text-xs font-bold text-[#000000] uppercase tracking-wider mb-2.5">
+                      <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-2.5">
                         {t("ટેકનિકલ વિગત (Specifications):", "Technical Specifications:")}
                       </h3>
-                      <div className="bg-[#f2f4f5] rounded-2xl p-4 border border-[#ebebeb] divide-y divide-[#ebebeb] text-xs">
-                        {product.specifications.map((spec, i) => (
+                      <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200 divide-y divide-gray-200 text-xs">
+                        {product.specifications.map((spec: any, i: number) => (
                           <div key={i} className="py-2 flex items-center justify-between first:pt-0 last:pb-0">
-                            <span className="text-[#787574] font-medium">{t(spec.keyGu, spec.keyEn)}</span>
-                            <span className="font-bold text-[#000000]">{t(spec.valueGu, spec.valueEn)}</span>
+                            <span className="text-gray-500 font-medium">{t(spec.keyGu, spec.keyEn)}</span>
+                            <span className="font-bold text-gray-900">{t(spec.valueGu, spec.valueEn)}</span>
                           </div>
                         ))}
                         {currentVariant?.specification && (
                           <div className="py-2 flex items-center justify-between last:pb-0">
-                            <span className="text-[#787574] font-medium">{t("પસંદ કરેલ મોડેલ", "Selected Model")}</span>
-                            <span className="font-bold text-[#5433eb]">
+                            <span className="text-gray-500 font-medium">{t("મોડેલ / સ્પેક", "Selected Model")}</span>
+                            <span className="font-bold text-[#1E8E3E]">
                               {t(currentVariant.specificationGu || currentVariant.specification, currentVariant.specification)}
                             </span>
                           </div>
@@ -252,15 +335,15 @@ export default function ProductDetailPage() {
                   )}
 
                   {/* Applications Bullet List */}
-                  {product.applicationsEn && product.applicationsEn.length > 0 && (
+                  {product?.applicationsEn && product.applicationsEn.length > 0 && (
                     <div className="mb-6">
-                      <h3 className="text-xs font-bold text-[#000000] uppercase tracking-wider mb-2.5">
+                      <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-2.5">
                         {t("મુખ્ય ઉપયોગ (Applications):", "Key Applications:")}
                       </h3>
-                      <ul className="space-y-1.5 text-xs text-[#332f2d]">
-                        {product.applicationsGu.map((app, i) => (
+                      <ul className="space-y-1.5 text-xs text-gray-700">
+                        {product.applicationsGu?.map((app: string, i: number) => (
                           <li key={i} className="flex items-start gap-2">
-                            <CheckCircle2 className="w-4 h-4 text-[#5433eb] shrink-0 mt-0.5" />
+                            <CheckCircle2 className="w-4 h-4 text-[#1E8E3E] shrink-0 mt-0.5" />
                             <span>{t(app, product.applicationsEn[i])}</span>
                           </li>
                         ))}
@@ -269,13 +352,13 @@ export default function ProductDetailPage() {
                   )}
                 </div>
 
-                {/* Direct Action Buttons (Desktop & Tablet) */}
-                <div className="pt-6 border-t border-[#ebebeb] grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Direct Action Buttons */}
+                <div className="pt-6 border-t border-gray-200 grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <a
                     href={`tel:${siteContent.business.phone1}`}
-                    className="flex items-center justify-center gap-2 py-4 px-6 rounded-full bg-[#f2f4f5] hover:bg-stone-200 text-[#000000] text-sm font-bold transition-all active:scale-95 shadow-sm"
+                    className="flex items-center justify-center gap-2 py-3.5 px-6 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-900 text-xs sm:text-sm font-bold transition-all active:scale-95 shadow-xs"
                   >
-                    <Phone className="w-4 h-4 text-[#5433eb]" />
+                    <Phone className="w-4 h-4 text-[#1E8E3E]" />
                     <span>{t("કોલ કરો: ", "Call: ")}{siteContent.business.phone1Display}</span>
                   </a>
 
@@ -283,9 +366,9 @@ export default function ProductDetailPage() {
                     href={whatsappUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 py-4 px-6 rounded-full bg-[#5433eb] hover:bg-[#4323d4] text-white text-sm font-bold shadow-violet-glow hover:shadow-violet-glow-lg transition-all active:scale-95"
+                    className="flex items-center justify-center gap-2 py-3.5 px-6 rounded-full bg-[#1E8E3E] hover:bg-[#146C2E] text-white text-xs sm:text-sm font-bold shadow-green-glow transition-all active:scale-95"
                   >
-                    <MessageCircle className="w-5 h-5" />
+                    <MessageCircle className="w-4 h-4" />
                     <span>{t("વોટ્સએપ પર ભાવ પૂછો", "Inquire on WhatsApp")}</span>
                   </a>
                 </div>
@@ -293,24 +376,24 @@ export default function ProductDetailPage() {
             </div>
           </div>
 
-          {/* Smart Cross-Selling / "You May Also Need" Section */}
-          {relatedProducts.length > 0 && (
+          {/* Related Products */}
+          {finalRelated.length > 0 && (
             <div className="mt-12">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-[#ebebeb] text-[#5433eb] text-xs font-semibold mb-1">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-gray-200 text-[#1E8E3E] text-xs font-semibold mb-1">
                     <Sparkles className="w-3.5 h-3.5" />
                     <span>{t("સાથે જરૂરી સાધનો", "Complementary Items")}</span>
                   </div>
-                  <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[#000000]">
+                  <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-gray-900">
                     {t("તમને આ સાધનોની પણ જરૂર પડી શકે છે", "You May Also Need")}
                   </h2>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                {relatedProducts.map((p) => (
-                  <ProductCard key={p.id} product={p} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+                {finalRelated.map((p: any) => (
+                  <ProductCard key={p._id || p.id || p.slug} product={p} />
                 ))}
               </div>
             </div>
@@ -318,30 +401,8 @@ export default function ProductDetailPage() {
         </div>
       </main>
 
-      {/* Sticky Mobile Bottom CTA Bar */}
-      <div className="md:hidden fixed bottom-18 left-3 right-3 z-40">
-        <div className="bg-white/95 backdrop-blur-md p-2.5 rounded-full border border-[#ebebeb] shadow-xl grid grid-cols-2 gap-2">
-          <a
-            href={`tel:${siteContent.business.phone1}`}
-            className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-full bg-[#f2f4f5] text-[#000000] text-xs font-bold"
-          >
-            <Phone className="w-3.5 h-3.5 text-[#5433eb]" />
-            <span>{t("કોલ કરો", "Call")}</span>
-          </a>
-
-          <a
-            href={whatsappUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-full bg-[#5433eb] text-white text-xs font-bold shadow-violet-glow"
-          >
-            <MessageCircle className="w-3.5 h-3.5" />
-            <span>WhatsApp</span>
-          </a>
-        </div>
-      </div>
-
       <Footer />
+      <FloatingWhatsApp />
       <MobileBottomNav />
     </div>
   );
