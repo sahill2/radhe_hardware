@@ -1,0 +1,104 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *, ::before, ::after {
+    box-sizing: border-box;
+    border-width: 0;
+    border-style: solid;
+    border-color: #ebebeb;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+    tab-size: 4;
+    font-family: var(--font-inter), var(--font-noto-gujarati), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  body {
+    margin: 0;
+    line-height: inherit;
+    background-color: #f2f4f5;
+    color: #111827;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+
+  /* Reset default links so there are NO browser default blue underlined links */
+  a {
+    color: inherit;
+    text-decoration: inherit;
+  }
+
+  /* Reset default button appearance */
+  button, input, optgroup, select, textarea {
+    font-family: inherit;
+    font-size: 100%;
+    line-height: inherit;
+    color: inherit;
+    margin: 0;
+    padding: 0;
+  }
+
+  button, [role="button"] {
+    cursor: pointer;
+  }
+}
+
+/* Custom UI Tokens & Helpers */
+.bg-canvas {
+  background-color: #f2f4f5;
+}
+.bg-pure-white {
+  background-color: #ffffff;
+}
+
+.shadow-card-sm {
+  box-shadow: rgba(0, 0, 0, 0.06) 0px 2px 8px 0px;
+}
+.shadow-card-dual {
+  box-shadow: rgba(0, 0, 0, 0.08) 0px 4px 12px -2px, rgba(0, 0, 0, 0.06) 0px 2px 6px -1px;
+}
+.shadow-card-lg {
+  box-shadow: rgba(0, 0, 0, 0.12) 0px 4px 24px 0px;
+}
+.shadow-green-glow {
+  box-shadow: rgba(30, 142, 62, 0.35) 0px 4px 24px 0px;
+}
+.shadow-green-glow-lg {
+  box-shadow: rgba(30, 142, 62, 0.45) 0px 8px 30px 0px;
+}
+.shadow-violet-glow {
+  box-shadow: rgba(84, 51, 235, 0.35) 0px 4px 24px 0px;
+}
+
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Animations inspired by React Bits & Refero */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.8; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.03); }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 3s infinite ease-in-out;
+}
